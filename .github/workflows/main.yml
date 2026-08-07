@@ -1,0 +1,41 @@
+name: Build Rock Hound APK
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Patch flutter_inappwebview_android compileSdk to 34
+        run: |
+          find ~/.pub-cache -path "*/flutter_inappwebview_android*/android/build.gradle" | while read f; do
+            sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' "$f"
+            sed -i 's/compileSdk [0-9]*/compileSdk 34/g' "$f"
+          done
+
+      - run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RockHound-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
